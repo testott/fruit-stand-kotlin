@@ -7,7 +7,7 @@ Simple REST API for a take home assessment written in Kotlin
 3. `./gradlew build`
 
 ## Test
-`./gradlew test`'
+`./gradlew test`
 
 ## Test Coverage
 1. `./gradlew test jacocoTestReport`
