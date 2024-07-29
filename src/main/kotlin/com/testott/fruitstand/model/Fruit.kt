@@ -1,9 +1,6 @@
 package com.testott.fruitstand.model
 
-import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
-import jakarta.persistence.Id
+import jakarta.persistence.*
 import java.math.BigDecimal
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
@@ -12,8 +9,12 @@ import org.springframework.stereotype.Repository
 data class Fruit(
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Int? = null,
+
     val name: String,
-    val value: BigDecimal
+    val value: BigDecimal,
+
+    @OneToOne(mappedBy = "fruit")
+    var offer: Offer? = null
 )
 
 @Repository
