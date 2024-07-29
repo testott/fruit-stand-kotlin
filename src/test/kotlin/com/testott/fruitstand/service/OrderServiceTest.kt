@@ -23,7 +23,7 @@ class OrderServiceTest {
     private lateinit var discountService: DiscountService
 
     @MockkBean
-    private lateinit var offerRepository: OfferRepository
+    private lateinit var orderRepository: OrderRepository
 
     private val fruitApple = Fruit(
         name = "apple",
@@ -57,23 +57,13 @@ class OrderServiceTest {
     @BeforeEach
     fun setup() {
         fruitRepository = mockk()
-        offerRepository = mockk()
         discountService = mockk()
-        orderService = OrderService(fruitRepository, discountService)
+        orderRepository = mockk()
+        orderService = OrderService(fruitRepository, discountService, orderRepository)
 
         // Mocking the repository responses
         every { fruitRepository.findByName("apple") } returns fruitApple
         every { fruitRepository.findByName("orange") } returns fruitOrange
-
-        // Mocking the offer repository responses
-        every { offerRepository.findByFruit(eq(fruitApple)) } returns Offer(
-            fruit = fruitApple,
-            discount = Discount(discountType = DiscountType.BUY_GET_DISCOUNT, params = mapOf("buy" to 1, "get" to 1))
-        )
-        every { offerRepository.findByFruit(eq(fruitOrange)) } returns Offer(
-            fruit = fruitOrange,
-            discount = Discount(discountType = DiscountType.BUY_GET_DISCOUNT, params = mapOf("buy" to 2, "get" to 1))
-        )
     }
 
     @Test
@@ -89,7 +79,7 @@ class OrderServiceTest {
         every { discountService.getDiscount(eq(fruitOrange), 4) } returns BigDecimal("0.25")
 
         // Act
-        val invoice = orderService.generateInvoice(cart)
+        val invoice = orderService.generateInvoice(cart, 1)
 
         // Assert
         val expectedTotalCost = BigDecimal("1.95").toPlainString()
@@ -120,7 +110,55 @@ class OrderServiceTest {
 
         // Act & Assert
         assertThrows<IllegalArgumentException> {
-            orderService.generateInvoice(cart)
+            orderService.generateInvoice(cart, 1)
         }
+    }
+
+    @Test
+    fun `createOrder should save and return order with correct invoice`() {
+        // Arrange
+        val cartItems = listOf(CartItem("apple", 3), CartItem("orange", 4))
+        val invoice = Invoice(1, emptyList(), "0.00", "0.00")
+        val order = Order(1, totalAmount = BigDecimal("1.95"), invoice = invoice)
+
+        every { orderRepository.save(any()) } returns order
+        every { fruitRepository.findByName("apple") } returns fruitApple
+        every { fruitRepository.findByName("orange") } returns fruitOrange
+        every { discountService.getDiscount(any(), any()) } returns BigDecimal.ZERO
+
+        // Act
+        val result = orderService.createOrder(cartItems)
+
+        // Assert
+        assertEquals(order, result)
+        verify { orderRepository.save(any()) }
+    }
+
+    @Test
+    fun `getOrderById should return order with correct invoice`() {
+        // Arrange
+        val order = Order(1, totalAmount = BigDecimal("1.95"), invoice = Invoice(1, emptyList(), "0.00", "1.95"))
+
+        every { orderRepository.findById(1) } returns java.util.Optional.of(order)
+
+        // Act
+        val result = orderService.getOrderById(1)
+
+        // Assert
+        assertEquals(order, result)
+    }
+
+    @Test
+    fun `getAllOrders should return list of orders with correct invoices`() {
+        // Arrange
+        val orders = listOf(Order(1, totalAmount = BigDecimal("1.95"), invoice = Invoice(1, emptyList(), "0.00", "1.95")))
+
+        every { orderRepository.findAll() } returns orders
+
+        // Act
+        val result = orderService.getAllOrders()
+
+        // Assert
+        assertEquals(orders, result)
     }
 }
